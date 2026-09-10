@@ -1,148 +1,113 @@
-# GitOps Sentinel — a self-healing GitOps PoC (CAIPE + Kubernetes + ArgoCD + GitHub)
+# GitOps Sentinel — Step 1: Deploy the toy app with ArgoCD
 
-**Story:** deploy a toy app via ArgoCD into a local k3s cluster -> break it
-live -> a CAIPE autonomous agent detects the drift/degraded health on a
-schedule and opens a GitHub issue -> you ask CAIPE about it over chatops ->
-fix it and watch the app go green again.
+This is the beginner-friendly path: get a tiny demo app (`hello-caipe`)
+running on your cluster **through ArgoCD**, so you can see GitOps working
+end to end. CAIPE integration (chatops, auto-filed GitHub issues) is a later
+stage — see [docs/caipe-integration.md](docs/caipe-integration.md) — and is
+ignored completely here.
 
-This folder is a standalone companion to the
-[ai-platform-engineering](https://github.com/cnoe-io/ai-platform-engineering)
-(CAIPE) repo, expected to sit next to it on disk (`../ai-platform-engineering`).
+You already have both k3s and ArgoCD deployed, so this guide starts from
+there.
 
-## What's in this folder
+## What you're building
 
-| Path | Purpose |
-|---|---|
-| [app/](app/) | Toy app (`hello-caipe`) manifests, deployed via ArgoCD |
-| [argocd/application.yaml](argocd/application.yaml) | ArgoCD `Application` pointing at `app/` |
-| [scripts/install-argocd.sh](scripts/install-argocd.sh) | Installs ArgoCD into the k3s cluster |
-| [scripts/break-demo.sh](scripts/break-demo.sh) | Intentionally drifts the app (bad image / scale-down / OOM) |
-| [scripts/fix-demo.sh](scripts/fix-demo.sh) | Syncs the app back to its git state |
-| [autonomous-task.json](autonomous-task.json) | Example payload to register the scheduled health-check task |
-
-The CAIPE skill that does the detection + issue-filing lives in the CAIPE
-chart so it ships with any CAIPE deployment:
-`ai-platform-engineering/charts/ai-platform-engineering/data/skills/gitops-sentinel/SKILL.md`
-
-## Prerequisites
-
-- A running **k3s** cluster (`curl -sfL https://get.k3s.io | sh -` on the host,
-  or already installed) plus `kubectl`, `helm`, and (optionally) the `argocd` CLI
-- k3s writes its kubeconfig to `/etc/rancher/k3s/k3s.yaml` (root-owned). Point
-  `kubectl`/`helm` at it, e.g.:
-  ```bash
-  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-  # or: sudo k3s kubectl ...
-  # or copy it: sudo cat /etc/rancher/k3s/k3s.yaml > ~/.kube/config && chmod 600 ~/.kube/config
-  ```
-- A git remote you can push this folder to (its own repo, e.g.
-  `gitops-sentinel`) — ArgoCD syncs from git, not your laptop
-- A GitHub PAT with `repo` scope (issues) for the `mcp-github` agent
-- An LLM API key (Anthropic/OpenAI/Bedrock) for CAIPE itself
-
-## Setup
-
-### 1. Point kubectl at k3s and install ArgoCD
-
-```bash
-cd gitops-sentinel
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-kubectl get nodes   # sanity check: your k3s node should show Ready
-./scripts/install-argocd.sh
+```mermaid
+flowchart LR
+  Git["Your GitHub repo\n(app/ manifests)"] -->|ArgoCD polls git| ArgoCD[ArgoCD]
+  ArgoCD -->|applies manifests| K8s["k3s cluster\nnamespace: poc-demo"]
 ```
 
-k3s already bundles Traefik as its ingress controller and ServiceLB as its
-load balancer, so no extra port-mapping config is needed the way kind
-requires it — `kubectl port-forward` (used below) or a k3s `Ingress`/
-`LoadBalancer` Service both work out of the box.
+You edit/push YAML to git. ArgoCD notices and applies it to the cluster.
+You never run `kubectl apply` on the app yourself — that's the whole point
+of GitOps: git is the source of truth, ArgoCD is the robot that keeps the
+cluster in sync with it.
 
-### 2. Push this folder to a repo ArgoCD can reach
+## Already done for you
 
-Push `gitops-sentinel/` to its own git remote, then edit
-[argocd/application.yaml](argocd/application.yaml)'s `repoURL` to point at it.
+- This folder is a local git repo (one commit) with the app manifests and
+  the ArgoCD `Application`, remote `origin` set to
+  `https://github.com/ponchotitlan/caipe-sentinel.git`.
+- `argocd/application.yaml` already points at that repo/path.
+- ArgoCD is exposed on your k3s node at NodePort `30080` (see
+  [argocd/nodeport-service.yaml](argocd/nodeport-service.yaml)).
+
+## What you need to do
+
+### 1. Push this repo to GitHub
+
+This couldn't be pushed automatically — the credentials cached in this dev
+environment belong to a different GitHub account than `ponchotitlan`. From a
+terminal authenticated as **you**:
+
+```bash
+cd /home/gitops-sentinel
+git push -u origin main
+```
+
+If it asks for a password, GitHub no longer accepts your account password —
+paste a [Personal Access Token](https://github.com/settings/tokens) instead,
+or push over SSH if you have a key registered with GitHub.
+
+### 2. Tell ArgoCD about the app
 
 ```bash
 kubectl apply -f argocd/application.yaml
-kubectl -n poc-demo get pods -w   # wait for hello-caipe to go Running/Healthy
 ```
 
-### 3. Deploy CAIPE onto the same cluster
+This creates one `Application` object named `hello-caipe` in the `argocd`
+namespace — a YAML object that just says "watch this repo/path, put the
+result in namespace `poc-demo`".
 
-Reuse the existing quickstart from the CAIPE repo. `setup-caipe.sh` detects
-and uses your current kubectl context, including a k3s context, so leave off
-`--create-cluster` (that flag is kind-only):
+### 3. Watch it deploy
 
 ```bash
-cd ../ai-platform-engineering
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-./setup-caipe.sh --non-interactive
+kubectl -n poc-demo get pods -w
 ```
 
-Then enable in `charts/ai-platform-engineering/values.yaml` (or an overlay):
-
-```yaml
-tags:
-  mcp-argocd: true
-  mcp-aws: true        # provides eks_kubectl_execute for pod-level checks
-  mcp-github: true
-  autonomous-agents: true
-  slack-bot: true       # or webex-bot: true
-```
-
-Configure the ArgoCD MCP with your in-cluster ArgoCD server address/token,
-and the GitHub MCP with `GITHUB_PERSONAL_ACCESS_TOKEN`. See
-`ai_platform_engineering/mcp/argocd/README.md` and
-`ai_platform_engineering/mcp/github/README.md` in the CAIPE repo.
-
-### 4. Register the scheduled health-check task
-
-Easiest: in the CAIPE UI, go to **Autonomous**, create a task, pick the
-dynamic agent that has ArgoCD + kubectl + GitHub tools, cron `*/30 * * * *`,
-and paste the prompt from [autonomous-task.json](autonomous-task.json).
-
-Or via API once you have the dynamic agent id and a session token:
+Wait until you see 2 pods for `hello-caipe` in `Running`/`Ready` (Ctrl+C to
+stop watching). First sync can take a few minutes (ArgoCD's default git
+polling interval); to force it immediately:
 
 ```bash
-curl -X POST "$CAIPE_UI_URL/api/autonomous/tasks" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d @autonomous-task.json
+kubectl -n argocd annotate application hello-caipe \
+  argocd.argoproj.io/refresh=hard --overwrite
 ```
 
-For the live demo, don't wait 30 minutes — use the task's **Run now**
-button in the UI right after you break things.
+### 4. Check it in the ArgoCD UI (optional but satisfying)
 
-## Running the demo live
+- **URL:** whatever you pointed your Cloudflare Tunnel at, or
+  `http://<k3s-node-ip>:30080`
+- **Username:** `admin`
+- **Password:**
+  ```bash
+  kubectl -n argocd get secret argocd-initial-admin-secret \
+    -o jsonpath='{.data.password}' | base64 -d
+  ```
+  Change it after first login — this secret is only meant for bootstrapping.
 
-1. Show the app healthy: ask the chatbot *"what's the status of the
-   hello-caipe ArgoCD app?"* — expect a clean, synced/healthy answer.
-2. Break it:
-   ```bash
-   ./scripts/break-demo.sh badimage
-   ```
-3. Trigger the autonomous task's **Run now** (or wait for cron). Watch a
-   GitHub issue appear, labeled `gitops-sentinel`, with the pod table and
-   recommended remediation.
-4. Ask the chatbot the same question again — it now reports OutOfSync /
-   Degraded and can reference the issue it just filed.
-5. Optionally show the guardrail: ask the chatbot to *sync* the
-   application and note that this is a separate, explicit action (this
-   skill only detects and files issues — see the Guidelines section of
-   `gitops-sentinel/SKILL.md`).
-6. Reset for the next run:
-   ```bash
-   ./scripts/fix-demo.sh
-   ```
+You should see the `hello-caipe` app tile, "Synced" and "Healthy".
 
-## Cleanup
-
-k3s is a persistent system service (not an ephemeral cluster like kind), so
-tear down just the demo's resources instead of the whole cluster:
+### 5. See the app actually respond
 
 ```bash
-kubectl delete -f argocd/application.yaml
-kubectl delete ns poc-demo
-# optional: remove ArgoCD itself
-kubectl delete ns argocd
+kubectl -n poc-demo port-forward svc/hello-caipe 8888:80
 ```
 
-To remove k3s entirely from the host: `/usr/local/bin/k3s-uninstall.sh`.
+Then open `http://localhost:8888` — a tiny nginx page proving the deployment
+is really running and reachable.
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| `Application` shows no health/sync status | ArgoCD hasn't synced yet — force it with the `annotate ... refresh=hard` command above |
+| Comparison/repo error in the UI | Step 1's push hasn't landed on GitHub yet, or the branch name doesn't match `argocd/application.yaml` |
+| Pods stuck `Pending` | Check `kubectl -n poc-demo describe pod <name>` for the reason |
+
+## What's next
+
+Once `hello-caipe` is up and synced, move on to
+[docs/caipe-integration.md](docs/caipe-integration.md) to wire in CAIPE:
+chatops questions about the app, and an autonomous task that files a GitHub
+issue when it detects drift or degraded health.
+
