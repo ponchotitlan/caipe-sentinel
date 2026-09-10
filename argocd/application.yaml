@@ -1,0 +1,24 @@
+# ArgoCD Application for the "GitOps Sentinel" PoC.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-caipe
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ponchotitlan/caipe-sentinel.git
+    targetRevision: main
+    path: app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: poc-demo
+  syncPolicy:
+    # selfHeal is intentionally OFF: for the demo we want manual drift
+    # (kubectl edits from break-demo.sh) to *stick* so CAIPE has something
+    # to detect and report on, instead of ArgoCD reverting it instantly.
+    automated:
+      selfHeal: false
+      prune: true
+    syncOptions:
+      - CreateNamespace=true
