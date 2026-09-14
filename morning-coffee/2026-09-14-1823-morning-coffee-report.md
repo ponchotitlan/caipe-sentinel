@@ -1,0 +1,108 @@
+# ☕️ Morning Coffee Report - September 14, 2026
+
+**Generated:** 2026-09-14 18:23 UTC  
+**Scope:** All ArgoCD-managed applications  
+**Applications Analyzed:** 1
+
+---
+
+## 🔴 Application: hello-caipe
+
+### Finding
+**CRITICAL DRIFT DETECTED**: The live Kubernetes Deployment has been manually modified outside of GitOps control, resulting in complete application unavailability. The cluster state diverges significantly from the Git-declared desired state, with 0 replicas running and an invalid container image deployed.
+
+### Evidence
+
+| Source | Observation |
+|--------|-------------|
+| **ArgoCD** | • Sync Status: **OutOfSync**<br>• Health Status: Healthy (misleading)<br>• Auto-Sync: Enabled (prune: true, self-heal: **disabled**)<br>• Last Sync: 2026-09-14T18:19:45Z<br>• Git Revision: 66f56a78<br>• Repository: https://github.com/ponchotitlan/caipe-sentinel.git<br>• Path: app, Branch: main |
+| **Kubernetes** | • **Pods Running: 0** (all terminated at 18:20:27)<br>• Deployment Generation: **16** (indicates 16 manual updates)<br>• ReplicaSets: 3 total, all scaled to 0<br>• Service: Healthy (NodePort 30081)<br>• Namespace: poc-demo (exists) |
+| **Drift Details** | **Git declares:** replicas: 2, image: nginxdemos/hello:plain-text, memory limit: 64Mi<br>**Cluster has:** replicas: 0, image: nginxdemos/hello:does-not-exist, memory limit: 16Mi |
+| **Events** | • 18:05:54 - ArgoCD auto-sync succeeded, pods created<br>• 18:06:17 - Pods terminated, invalid image deployed (manual)<br>• 18:19:45 - ArgoCD auto-sync succeeded again<br>• 18:20:27 - **All pods terminated, scaled to 0** (manual intervention)<br>• Warning: Failed to pull image "nginxdemos/hello:does-not-exist" |
+
+### Impact
+
+**Operational:**
+- ❌ Application is completely down (0 replicas running)
+- ❌ Service endpoints are unavailable
+- ❌ Manual changes bypass GitOps audit trail and version control
+
+**GitOps Integrity:**
+- ⚠️ Git is not the single source of truth
+- ⚠️ Self-heal is disabled, allowing manual changes to persist
+- ⚠️ Deployment has been manually modified 16 times
+- ⚠️ ArgoCD continuously syncs but changes are immediately reverted by manual intervention
+
+**Security & Compliance:**
+- 🔒 Manual cluster modifications violate GitOps principles
+- 🔒 No audit trail for who made the changes or why
+- 🔒 Invalid container image suggests testing or troubleshooting activity
+
+### Recommended Next Step
+
+**Immediate Actions (Read-only diagnostics):**
+1. ✅ Check Kubernetes audit logs to identify who/what is modifying the Deployment
+2. ✅ Review ArgoCD application logs for sync failures or conflicts
+3. ✅ Check if any automation (CI/CD, operators, HPA) is modifying the Deployment
+
+**Required Mutations (DO NOT EXECUTE - PLAN ONLY):**
+
+**Option 1: Enable Self-Heal (Recommended)**
+- **Target**: ArgoCD Application `hello-caipe`
+- **Change**: Set `spec.syncPolicy.automated.selfHeal: true`
+- **Risk**: ArgoCD will automatically revert any manual changes within ~3 minutes
+- **Rollback**: Set `selfHeal: false` to restore current behavior
+- **Verification**: Monitor ArgoCD sync status, check pods are created and running with correct image
+
+**Option 2: Manual Sync (Temporary Fix)**
+- **Target**: Deployment `hello-caipe` in namespace `poc-demo`
+- **Change**: Trigger ArgoCD sync via UI or CLI: `argocd app sync hello-caipe`
+- **Risk**: Manual changes will reoccur if root cause is not addressed
+- **Rollback**: N/A (sync is idempotent)
+- **Verification**: Check deployment has 2 replicas with plain-text image
+
+**Option 3: Investigate and Stop Manual Changes (Root Cause)**
+- **Target**: Identify and stop the process/person making manual changes
+- **Change**: Review audit logs, communicate with team, implement RBAC restrictions
+- **Risk**: May disrupt legitimate troubleshooting workflows
+- **Rollback**: Restore previous RBAC policies if needed
+- **Verification**: Monitor deployment for 24 hours to ensure no further manual changes
+
+**Recommended Approach:**
+1. Enable self-heal to enforce GitOps (Option 1)
+2. Investigate audit logs to identify source of manual changes (Option 3)
+3. Communicate with team about GitOps workflow and proper change procedures
+
+---
+
+## 📊 Summary
+
+**Total Applications**: 1  
+**Applications with Drift**: 1 (100%)  
+**Applications Healthy & Synced**: 0 (0%)
+
+**Drift Severity:**
+- 🔴 Critical: 1 (hello-caipe - application down, manual changes bypassing GitOps)
+- 🟡 Warning: 0
+- 🟢 Info: 0
+
+**Key Takeaways:**
+- GitOps integrity is compromised by manual cluster modifications
+- Application is completely unavailable (0 replicas)
+- Self-heal is disabled, allowing drift to persist
+- Pattern suggests ongoing manual intervention or automation conflict
+
+---
+
+## 🔗 Links
+
+- **ArgoCD Application**: http://172.17.0.1:30080/applications/argocd/hello-caipe
+- **Repository**: https://github.com/ponchotitlan/caipe-sentinel.git
+- **Namespace**: poc-demo
+- **Detailed Analysis**: See drift_analysis.md in workflow artifacts
+
+---
+
+**Report Generated by**: agent-infra-analyst  
+**Workflow**: Morning Coffee Reports  
+**Next Review**: Tomorrow morning ☕️
