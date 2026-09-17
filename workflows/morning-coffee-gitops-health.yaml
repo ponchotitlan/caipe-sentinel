@@ -1,0 +1,65 @@
+name: Morning Coffee Reports
+description: Your daily dose of caffeine and reporting
+visibility: private
+steps:
+  - type: step
+    display_text: Discover ArgoCD apps
+    agent_id: agent-infra-analyst
+    prompt: List all ArgoCD-managed apps
+    on_error: abort
+    retry: null
+    config_override: null
+  - type: step
+    display_text: Health Check
+    agent_id: agent-infra-analyst
+    prompt: |-
+      For the apps handled in the previous step:
+      {{ previous_output }}
+      Check ArgoCD health/sync status and correlate with live Kubernetes
+      conditions, events, and logs. Report facts vs hypotheses per app.
+      Explicitly report drift for every app in scope: sync status, health
+      status, and a short diff summary between desired and live state —
+      even for apps where no sync was requested or approved. State
+      "no drift" when none is found.
+    on_error: retry
+    retry:
+      max_attempts: 3
+    config_override: null
+  - type: step
+    display_text: Compile report
+    agent_id: agent-infra-analyst
+    prompt: >-
+      Using these findings:
+
+      {{ steps.health_check.output }}
+
+      Produce a "Morning Coffee ☕️" GitOps report (Finding/Evidence/Impact/
+
+      Recommended next step per app) and publish it on GitHub under the folder
+      /morning-coffee.
+    on_error: skip
+    retry: null
+    config_override: null
+  - type: step
+    display_text: Raise Issues if Needed
+    agent_id: agent-infra-analyst
+    prompt: |-
+      Review the report above: {{ previous_output }}
+      If any app is unhealthy, out of sync without remediation, or has
+      unresolved risk, create one GitHub issue per problem in
+      GitHub.
+
+      If everything is healthy, state that explicitly and take no action.
+    on_error: skip
+    retry: null
+    config_override: null
+  - type: step
+    display_text: Post Slack Card
+    agent_id: agent-slack-card-reporter
+    prompt: |-
+      Report URL: {{ steps.compile_report.output }}
+      Issue URL (optional, may be absent): {{ previous_output }}
+      Post the card per your fixed format.
+    on_error: skip
+    retry: null
+    config_override: null

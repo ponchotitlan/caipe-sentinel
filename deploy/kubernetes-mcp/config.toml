@@ -1,0 +1,32 @@
+port = "8080"
+log_file = "stderr"
+stateless = true
+read_only = true
+toolsets = ["core"]
+cluster_provider_strategy = "kubeconfig"
+kubeconfig = "/etc/kubernetes-mcp/kubeconfig"
+
+[[denied_resources]]
+group = ""
+version = "v1"
+kind = "Secret"
+
+[[denied_resources]]
+group = "rbac.authorization.k8s.io"
+version = "v1"
+kind = "Role"
+
+[[denied_resources]]
+group = "rbac.authorization.k8s.io"
+version = "v1"
+kind = "RoleBinding"
+
+[[denied_resources]]
+group = "rbac.authorization.k8s.io"
+version = "v1"
+kind = "ClusterRole"
+
+[[denied_resources]]
+group = "rbac.authorization.k8s.io"
+version = "v1"
+kind = "ClusterRoleBinding"
