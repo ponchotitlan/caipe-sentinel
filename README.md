@@ -1,6 +1,6 @@
-# 👁️🤖🦸 GitOps Sentinel + CAIPE
+# 👁️🤖🦸 CAIPE Sentinel
 
-GitOps Sentinel is a demo repository for showcasing how CAIPE can support SRE-style maintenance of a Kubernetes application.
+CAIPE Sentinel is a demo repository for showcasing how CAIPE can support SRE-style maintenance of a Kubernetes application.
 
 This project plays two roles at the same time:
 
@@ -206,5 +206,65 @@ Then use CAIPE to:
 - 📝 generate a GitHub report/issue,
 - 📣 optionally post a Slack update through workflow automation.
 
+## CAIPE elements walkthrough
+
+First of all, there are several agents configured via the Web UI with different capabilities, such as access to MCP servers/tools, plus MCP tools restricted by human-in-the-loop approval.
+
+> The agent's prompts are located [in this directory.](/agents/)
+
+![caipe-agents](/img/caipe-agents.png)
+
+Two of these agents, `infra-analyst` and `infra-operator`, have a skill assigned for the formatting of GitHub reports and issues. This skill restricts the usage of create-only MCP server tools.
+
+> The skill's prompt is located [in this directory](/skills/), and the file can be imported directly on CAIPE's Web UI to create the skill.
+
+![caipe-skill](/img/caipe-skills.png)
+
+Depending on the user group, logged-in users will have access to specific agents for chat-ops.
+
+![caipe-chat](/img/caipe-chat.png)
+
+There is a workflow that plugs several `infra-analyst` agents with a `slack-card-reporter` agent to automate the process of auditing and reporting. 
+
+> The workflow's definition is located [in this directory](/workflows/), and the file can be imported directly on CAIPE's Web UI to create the workflow.
+
+![caipe-workflow-def](/img/caipe-workflows.png)
+![caipe-workflow-exec](/img/caipe-workflows-2.png)
+
+Upon running the workflow, the resulting report (and issue, if the case) GitHub URLs are shared via Slack on a card in the designated channel.
+
+![caipe-slack](/img/caipe-slack.png)
+
+> As per the definition [of this skill](/skills/), the issues are located [here](https://github.com/ponchotitlan/caipe-sentinel/issues), while the `Morning Coffee` reports are located [in this folder](/reports/morning-coffee/).
+
+To run the workflow on a specific schedule, there is an autonomous task configured under the `morning-coffee-reporter` agent.
+
+![autonomous-task](/img/caipe-autonomous.png)
 
 
+## 🤝 Contributing
+
+Got ideas for new workflows or improvements? Contributions are welcome! Feel free to open issues or submit pull requests.
+
+---
+
+## 🌐 Resources
+
+- [Cisco pyATS Documentation](https://developer.cisco.com/docs/pyats/)
+- [n8n Documentation](https://docs.n8n.io/)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+
+---
+
+<div align="center"><br />
+    Made with ☕️ by Poncho Sandoval - <code>Developer Advocate 🥑 @ DevNet - Cisco Systems 🇵🇹</code><br /><br />
+    <a href="mailto:alfsando@cisco.com?subject=Question%20about%20[pyATS%20loves%20AgenticOps]&body=Hello,%0A%0AI%20have%20a%20question%20regarding%20your%20project.%0A%0AThanks!">
+        <img src="https://img.shields.io/badge/Contact%20me!-blue?style=flat&logo=gmail&labelColor=555555&logoColor=white" alt="Contact Me via Email!"/>
+    </a>
+    <a href="https://github.com/ponchotitlan/pyATS-loves-agenticops/issues/new">
+      <img src="https://img.shields.io/badge/Open%20Issue-2088FF?style=flat&logo=github&labelColor=555555&logoColor=white" alt="Open an Issue"/>
+    </a>
+    <a href="https://github.com/ponchotitlan/pyATS-loves-agenticops/fork">
+      <img src="https://img.shields.io/badge/Fork%20Repository-000000?style=flat&logo=github&labelColor=555555&logoColor=white" alt="Fork Repository"/>
+    </a>
+</div>
