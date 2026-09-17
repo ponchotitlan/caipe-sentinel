@@ -250,21 +250,20 @@ Got ideas for new workflows or improvements? Contributions are welcome! Feel fre
 
 ## 🌐 Resources
 
-- [Cisco pyATS Documentation](https://developer.cisco.com/docs/pyats/)
-- [n8n Documentation](https://docs.n8n.io/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [CAIPE official GitHub repository](github.com/caipe-io/ai-platform-engineering)
+- [Getting started with CAIPE](caipe.io/docs/getting-started/quick-start/)
 
 ---
 
 <div align="center"><br />
     Made with ☕️ by Poncho Sandoval - <code>Developer Advocate 🥑 @ DevNet - Cisco Systems 🇵🇹</code><br /><br />
-    <a href="mailto:alfsando@cisco.com?subject=Question%20about%20[pyATS%20loves%20AgenticOps]&body=Hello,%0A%0AI%20have%20a%20question%20regarding%20your%20project.%0A%0AThanks!">
+    <a href="mailto:alfsando@cisco.com?subject=Question%20about%20caipe]&body=Hello,%0A%0AI%20have%20a%20question%20regarding%20your%20project.%0A%0AThanks!">
         <img src="https://img.shields.io/badge/Contact%20me!-blue?style=flat&logo=gmail&labelColor=555555&logoColor=white" alt="Contact Me via Email!"/>
     </a>
-    <a href="https://github.com/ponchotitlan/pyATS-loves-agenticops/issues/new">
+    <a href="https://github.com/ponchotitlan/caipe-sentinel/issues/new">
       <img src="https://img.shields.io/badge/Open%20Issue-2088FF?style=flat&logo=github&labelColor=555555&logoColor=white" alt="Open an Issue"/>
     </a>
-    <a href="https://github.com/ponchotitlan/pyATS-loves-agenticops/fork">
+    <a href="https://github.com/ponchotitlan/caipe-sentinel/fork">
       <img src="https://img.shields.io/badge/Fork%20Repository-000000?style=flat&logo=github&labelColor=555555&logoColor=white" alt="Fork Repository"/>
     </a>
 </div>
