@@ -1,4 +1,4 @@
-# GitOps Sentinel
+# 👁️🤖🦸 GitOps Sentinel + CAIPE
 
 GitOps Sentinel is a demo repository for showcasing how CAIPE can support SRE-style maintenance of a Kubernetes application.
 
@@ -7,20 +7,32 @@ This project plays two roles at the same time:
 1. It is the source repository that hosts all demo resources.
 2. It is also the Git source watched by ArgoCD to deploy and reconcile the demo app in Kubernetes.
 
-In short: you push changes here, ArgoCD applies them, and CAIPE observes, analyzes, and reports on operational state.
+`In short:` you push changes here, ArgoCD applies them, and CAIPE observes, analyzes, and reports on operational state.
 
 ## Demo architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
   Dev["You commit and push"] --> Repo["GitHub repo: caipe-sentinel"]
   Repo -->|Poll + sync| ArgoCD["ArgoCD Application: hello-caipe"]
   ArgoCD -->|Apply desired state| K8s["k3s cluster\nnamespace: poc-demo"]
   K8s -->|Live state + telemetry| K8sMCP["Kubernetes MCP server\nread-only"]
   ArgoCD -->|App health + sync state| CAIPE["CAIPE"]
   K8sMCP -->|Read-only tools| CAIPE
+  CAIPE -->|Query app health and sync status| ArgoCD
+  CAIPE -->|Trigger sync operations| ArgoCD
+  CAIPE -->|Query live cluster state| K8sMCP
   CAIPE -->|Reports / issues / notifications| GitHubSlack["GitHub + Slack"]
 ```
+
+The components to build inside of your CAIPE instance are the following:
+
+![CAIPE Components 1](/img/caipe-demo-comp1.png)
+![CAIPE Components 2](/img/caipe-demo-comp2.png)
+
+The demo app mounted on a k8s cluster is the following:
+
+![k8s app](/img/k8s-demo-arch.png)
 
 ## What this demo proves
 
@@ -194,40 +206,5 @@ Then use CAIPE to:
 - 📝 generate a GitHub report/issue,
 - 📣 optionally post a Slack update through workflow automation.
 
-## Key manifests and what they control
 
-- 📄 `app/deployment.yaml`: demo namespace, deployment, service, probes, and resource limits.
-- 📄 `app/kustomization.yaml`: kustomize entrypoint for the demo app.
-- 📄 `argocd/application.yaml`: ArgoCD Application pointing to this repo/path (`app/`).
-- 📄 `argocd/nodeport-service.yaml`: ArgoCD server NodePort exposure.
-- 📄 `deploy/k8s-mcp-rbac.yaml`: read-only ServiceAccount + RBAC for Kubernetes MCP access.
-- 📄 `deploy/kubernetes-mcp/config.toml`: MCP server runtime and read-only denials.
-
-## Troubleshooting
-
-| Symptom | Likely cause | Quick action |
-|---|---|---|
-| ArgoCD app has no sync/health yet | Initial poll/sync delay | Run the refresh annotation command in Phase 2 |
-| ArgoCD comparison error | Repo not pushed, wrong branch, or inaccessible remote | Confirm `git push` and `targetRevision` settings |
-| Pods Pending/CrashLoopBackOff | Scheduling or container startup issue | `kubectl -n poc-demo describe pod <pod>` and inspect events |
-| CAIPE cannot call Kubernetes MCP | Container/network/config issue | Check `docker ps`, container logs, and endpoint URL |
-
-## Demo safety notes
-
-- ⚠️ This is a demonstration environment, not production hardening guidance.
-- 🔒 The MCP setup uses a non-expiring token for simplicity in demos.
-- 🛑 Do not reuse this token pattern as-is for strict production environments.
-- 🧰 Keep everything under `secrets/` out of version control.
-
-## Quick command recap
-
-```bash
-cd /home/gitops-sentinel
-git push -u origin main
-kubectl apply -f argocd/application.yaml
-kubectl -n poc-demo get pods -w
-kubectl apply -f deploy/k8s-mcp-rbac.yaml
-./scripts/run-kubernetes-mcp.sh
-./scripts/break-demo.sh all
-```
 
