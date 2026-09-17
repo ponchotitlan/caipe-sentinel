@@ -9,6 +9,9 @@ This project plays two roles at the same time:
 
 `In short:` you push changes here, ArgoCD applies them, and CAIPE observes, analyzes, and reports on operational state.
 
+---
+# [👉🏽 Check the slides deck from NDC 2026 here! 👈🏽](https://drive.google.com/file/d/18YqFQiBWLcXHK7sSw3pxVuezzubcPyU-/view?usp=drive_link)
+
 ## Demo architecture
 
 ```mermaid
@@ -215,6 +218,10 @@ First of all, there are several agents configured via the Web UI with different 
 ![caipe-agents](/img/caipe-agents.png)
 
 Two of these agents, `infra-analyst` and `infra-operator`, have a skill assigned for the formatting of GitHub reports and issues. This skill restricts the usage of create-only MCP server tools.
+
+The agent `infra-operator` is enabled with all the MCP tools of its correspondent MCP servers, including those which can change configurations. However, the latter are setup for `human-in-the-loop` intervention in the `Advanced` settings of the agent.
+
+![caipe-humanloop](/img/caipe-agent-humanloop.png)
 
 > The skill's prompt is located [in this directory](/skills/), and the file can be imported directly on CAIPE's Web UI to create the skill.
 
